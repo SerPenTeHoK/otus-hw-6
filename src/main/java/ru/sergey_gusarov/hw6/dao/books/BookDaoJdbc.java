@@ -25,14 +25,15 @@ public class BookDaoJdbc implements BookDao {
     private String sqlCount = "select count(*) from book";
     private String sqlInsert = "insert into book (id, `title`) values (:id, :title)";
     private String sqlFindById = "select * from book where id = :id";
+    // union - стараюсь без яркой необходимсти не использовать
     private String sqlFindAll = "select b.id as book_id, b.title, " +
             "a.id as author_id, a.name as author_name, " +
             "g.id as genre_id, g.name as genre_name " +
             "from book b " +
-            "join BOOK_AUTHOR_REL ba on ba.book_id = b.id " +
-            "join author a on a.id = ba.author_id " +
-            "join book_genre_REL bg on bg.book_id = b.id " +
-            "join genre g on g.id = bg.genre_id";
+            "left join BOOK_AUTHOR_REL ba on ba.book_id = b.id " +
+            "left join author a on a.id = ba.author_id " +
+            "left join book_genre_REL bg on bg.book_id = b.id " +
+            "left join genre g on g.id = bg.genre_id";
 
 
     public BookDaoJdbc(NamedParameterJdbcOperations jdbc, DictAuthorDao dictAuthorDao, DictGenreDao dictGenreDao) {
@@ -68,10 +69,16 @@ public class BookDaoJdbc implements BookDao {
 
     private Book getBook(Map<Integer, String> genres, Map<Integer, String> authors, Integer id, String title) {
         List<Genre> genreList = genres.entrySet().stream().
-                        map(k -> new Genre(k.getKey(), k.getValue()))
-                        .collect(Collectors.toList());
+                filter((k) -> k.getKey() > 0).
+                map(k -> new Genre(k.getKey(), k.getValue())).
+                collect(Collectors.toList());
         ArrayList<Author> authorList = new ArrayList<>();
-        authors.forEach((k, v) -> authorList.add(new Author(k, v)));
+        authors.forEach((k, v) -> {
+                    if (k > 0) {
+                        authorList.add(new Author(k, v));
+                    }
+                }
+        );
         return new Book(id, title, genreList, authorList);
     }
 

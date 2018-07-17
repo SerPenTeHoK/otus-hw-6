@@ -11,6 +11,7 @@ insert into GENRE (id, `name`) values (3, 'Genre3');
 insert into BOOK (id, `title`) values (1, 'Book1');
 insert into BOOK (id, `title`) values (2, 'Book2');
 insert into BOOK (id, `title`) values (3, 'Book3');
+insert into BOOK (id, `title`) values (4, 'Book4');
 
 INSERT INTO BOOK_AUTHOR_REL (BOOK_ID, AUTHOR_ID) VALUES (1,1);
 INSERT INTO BOOK_AUTHOR_REL (BOOK_ID, AUTHOR_ID) VALUES (2,2);
