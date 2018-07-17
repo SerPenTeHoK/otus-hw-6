@@ -1,36 +1,49 @@
 package ru.sergey_gusarov.hw6.dao.books;
 
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
 import org.springframework.stereotype.Repository;
+import ru.sergey_gusarov.hw6.dao.books.dict.DictAuthorDao;
+import ru.sergey_gusarov.hw6.dao.books.dict.DictGenreDao;
 import ru.sergey_gusarov.hw6.domain.books.Author;
 import ru.sergey_gusarov.hw6.domain.books.Book;
 import ru.sergey_gusarov.hw6.domain.books.Genre;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
 public class BookDaoJdbc implements BookDao {
     private final NamedParameterJdbcOperations jdbc;
-    private final AuthorDao authorDao;
-    private final GenreDao genreDao;
+    private final DictAuthorDao dictAuthorDao;
+    private final DictGenreDao dictGenreDao;
 
-    public BookDaoJdbc(NamedParameterJdbcOperations jdbc, AuthorDao authorDao, GenreDao genreDao) {
+    private String sqlCount = "select count(*) from book";
+    private String sqlInsert = "insert into book (id, `title`) values (:id, :title)";
+    private String sqlFindById = "select * from book where id = :id";
+    private String sqlFindAll = "select b.id as book_id, b.title, " +
+            "a.id as author_id, a.name as author_name, " +
+            "g.id as genre_id, g.name as genre_name " +
+            "from book b " +
+            "join BOOK_AUTHOR_REL ba on ba.book_id = b.id " +
+            "join author a on a.id = ba.author_id " +
+            "join book_genre_REL bg on bg.book_id = b.id " +
+            "join genre g on g.id = bg.genre_id";
+
+
+    public BookDaoJdbc(NamedParameterJdbcOperations jdbc, DictAuthorDao dictAuthorDao, DictGenreDao dictGenreDao) {
         this.jdbc = jdbc;
-        this.authorDao = authorDao;
-        this.genreDao = genreDao;
+        this.dictAuthorDao = dictAuthorDao;
+        this.dictGenreDao = dictGenreDao;
     }
 
     @Override
     public int count() {
-        final HashMap<String, Object> params = new HashMap<>(0);
-        return jdbc.queryForObject("select count(*) from book", params, Integer.class);
-        //return jdbc.queryForObject("select count(*) from book", Integer.class);
+        return jdbc.queryForObject(sqlCount, Collections.EMPTY_MAP, Integer.class);
     }
 
     @Override
@@ -38,24 +51,63 @@ public class BookDaoJdbc implements BookDao {
         final HashMap<String, Object> params = new HashMap<>(2);
         params.put("id", book.getId());
         params.put("title", book.getTitle());
-        jdbc.update("insert into book (id, `title`) values (:id, :title)", params);
-        //jdbc.update("insert into book (id, `title`) values (?, ?)", book.getId(), book.getTitle());
+        jdbc.update(sqlInsert, params);
     }
 
     @Override
     public Book getById(int id) {
         final HashMap<String, Object> params = new HashMap<>(1);
         params.put("id", id);
-        return jdbc.queryForObject("select * from book where id = :id", params, new BookMapper());
-        //return jdbc.queryForObject("select * from book where id = ?", new Object[]{id}, new BookMapper());
+        return jdbc.queryForObject(sqlFindById, params, new BookMapper());
     }
 
     @Override
     public List<Book> findAll() {
-        return jdbc.query("select * from book", new BookMapper());
-        //return jdbc.queryForList("select * from book", Book.class, new BookMapper());
+        return jdbc.query(sqlFindAll, new BooksResultMapper());
     }
 
+    private Book getBook(Map<Integer, String> genres, Map<Integer, String> authors, Integer id, String title) {
+        List<Genre> genreList = genres.entrySet().stream().
+                        map(k -> new Genre(k.getKey(), k.getValue()))
+                        .collect(Collectors.toList());
+        ArrayList<Author> authorList = new ArrayList<>();
+        authors.forEach((k, v) -> authorList.add(new Author(k, v)));
+        return new Book(id, title, genreList, authorList);
+    }
+
+    private class BooksResultMapper implements ResultSetExtractor<List<Book>> {
+        @Override
+        public List<Book> extractData(ResultSet rs) throws SQLException,
+                DataAccessException {
+            List<Book> list = new ArrayList<Book>();
+            int lastId = -1;
+
+            Map<Integer, String> genres = new HashMap<>();
+            Map<Integer, String> authors = new HashMap<>();
+            Integer id = null;
+            String title = null;
+            while (rs.next()) {
+                id = rs.getInt("id");
+                if (lastId != id) {
+                    title = rs.getString("title");
+                    if (lastId != -1) {
+                        Book b = getBook(genres, authors, id, title);
+                        list.add(b);
+                        genres = new HashMap<>();
+                        authors = new HashMap<>();
+                    }
+                    lastId = id;
+                }
+                authors.put(rs.getInt("author_id"), rs.getString("author_name"));
+                genres.put(rs.getInt("genre_id"), rs.getString("genre_name"));
+            }
+            if (lastId != -1) {
+                Book b = getBook(genres, authors, id, title);
+                list.add(b);
+            }
+            return list;
+        }
+    }
 
     private class BookMapper implements RowMapper<Book> {
         @Override
@@ -68,16 +120,15 @@ public class BookDaoJdbc implements BookDao {
             final HashMap<String, Object> params = new HashMap<>(1);
             params.put("id", id);
             List<Map<String, Object>> listMapAuthors = jdbc.queryForList("select AUTHOR_ID from BOOK_AUTHOR_REL where BOOK_ID = :id", params);
-            for (Map map : listMapAuthors){
-              Integer idAuthor = (Integer) map.get("AUTHOR_ID");
-              authors.add(authorDao.getById(idAuthor));
+            for (Map map : listMapAuthors) {
+                Integer idAuthor = (Integer) map.get("AUTHOR_ID");
+                authors.add(dictAuthorDao.getById(idAuthor));
             }
             List<Map<String, Object>> listMapGenre = jdbc.queryForList("select GENRE_ID from BOOK_GENRE_REL where BOOK_ID = :id", params);
-            for (Map map : listMapGenre){
+            for (Map map : listMapGenre) {
                 Integer idGenre = (Integer) map.get("GENRE_ID");
-                genres.add(genreDao.getById(idGenre));
+                genres.add(dictGenreDao.getById(idGenre));
             }
-
             return new Book(id, name, genres, authors);
         }
     }

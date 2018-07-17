@@ -1,10 +1,10 @@
-package ru.sergey_gusarov.hw6.dao.books;
+package ru.sergey_gusarov.hw6.dao.books.dict;
 
 import ru.sergey_gusarov.hw6.domain.books.Author;
 
 import java.util.List;
 
-public interface AuthorDao {
+public interface DictAuthorDao {
     int count();
 
     void insert(Author author);

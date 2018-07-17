@@ -1,27 +1,27 @@
-package ru.sergey_gusarov.hw6.dao.books;
+package ru.sergey_gusarov.hw6.dao.books.dict;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 import ru.sergey_gusarov.hw6.domain.books.Author;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
 @Repository
-public class AuthorDaoJdbc implements AuthorDao {
+public class DictAuthorDaoJdbc implements DictAuthorDao {
     private final NamedParameterJdbcOperations jdbc;
 
-    public AuthorDaoJdbc(NamedParameterJdbcOperations jdbc) {
+    public DictAuthorDaoJdbc(NamedParameterJdbcOperations jdbc) {
         this.jdbc = jdbc;
     }
 
     @Override
     public int count() {
-        return jdbc.queryForObject("select count(*) from Author", (SqlParameterSource) null, Integer.class);
+        return jdbc.queryForObject("select count(*) from Author", Collections.EMPTY_MAP, Integer.class);
     }
 
     @Override
@@ -43,7 +43,7 @@ public class AuthorDaoJdbc implements AuthorDao {
     public Author getByName(String name) {
         final HashMap<String, Object> params = new HashMap<>(1);
         params.put("name", name);
-        return jdbc.queryForObject("select * from Genre where name = :name", params, new AuthorMapper());
+        return jdbc.queryForObject("select * from Author where name = :name", params, new AuthorMapper());
     }
 
     @Override

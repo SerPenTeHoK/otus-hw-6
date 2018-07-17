@@ -1,27 +1,27 @@
-package ru.sergey_gusarov.hw6.dao.books;
+package ru.sergey_gusarov.hw6.dao.books.dict;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 import ru.sergey_gusarov.hw6.domain.books.Genre;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
 @Repository
-public class GenreDaoJdbc implements GenreDao {
+public class DictGenreDaoJdbc implements DictGenreDao {
     private final NamedParameterJdbcOperations jdbc;
 
-    public GenreDaoJdbc(NamedParameterJdbcOperations jdbc) {
+    public DictGenreDaoJdbc(NamedParameterJdbcOperations jdbc) {
         this.jdbc = jdbc;
     }
 
     @Override
     public int count() {
-        return jdbc.queryForObject("select count(*) from Genre", (SqlParameterSource) null, Integer.class);
+        return jdbc.queryForObject("select count(*) from Genre", Collections.EMPTY_MAP, Integer.class);
     }
 
     @Override
