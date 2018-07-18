@@ -22,9 +22,15 @@ public class BookDaoJdbc implements BookDao {
     private final DictAuthorDao dictAuthorDao;
     private final DictGenreDao dictGenreDao;
 
-    private String sqlCount = "select count(*) from book";
-    private String sqlInsert = "insert into book (id, `title`) values (:id, :title)";
-    private String sqlFindById = "select * from book where id = :id";
+    public static final String SQL_COUNT = "select count(*) from " + BookDao.TABLE_NAME;
+    public static final String SQL_FIND_ALL = "select * from " + BookDao.TABLE_NAME;
+    public static final String SQL_FIND_BY_ID = SQL_FIND_ALL + " where " + BookDao.ID_COLUMN + " = :" + BookDao.ID_COLUMN;
+    public static final String SQL_INSERT = "insert into " + BookDao.TABLE_NAME +
+            " ("+BookDao.ID_COLUMN + ", " + BookDao.TITLE_COLUMN +
+            ") values (:" + BookDao.ID_COLUMN +" ,:" + BookDao.TITLE_COLUMN + ")";
+    public static final String SQL_UPDATE = "update " + BookDao.TABLE_NAME + " set " + BookDao.TITLE_COLUMN + " = ? where " + BookDao.ID_COLUMN + " = :"+BookDao.ID_COLUMN;
+    public static final String SQL_DELETE = "delete from " + BookDao.TABLE_NAME + " where " + BookDao.ID_COLUMN + " = :" + BookDao.ID_COLUMN;
+
     // union - стараюсь без яркой необходимсти не использовать
     private String sqlFindAll = "select b.id as book_id, b.title, " +
             "a.id as author_id, a.name as author_name, " +
@@ -44,27 +50,42 @@ public class BookDaoJdbc implements BookDao {
 
     @Override
     public int count() {
-        return jdbc.queryForObject(sqlCount, Collections.EMPTY_MAP, Integer.class);
+        return jdbc.queryForObject(SQL_COUNT, Collections.EMPTY_MAP, Integer.class);
     }
 
     @Override
     public void insert(Book book) {
         final HashMap<String, Object> params = new HashMap<>(2);
-        params.put("id", book.getId());
-        params.put("title", book.getTitle());
-        jdbc.update(sqlInsert, params);
+        params.put(BookDao.ID_COLUMN, book.getId());
+        params.put(BookDao.TITLE_COLUMN, book.getTitle());
+        jdbc.update(SQL_INSERT, params);
     }
 
     @Override
     public Book getById(int id) {
         final HashMap<String, Object> params = new HashMap<>(1);
-        params.put("id", id);
-        return jdbc.queryForObject(sqlFindById, params, new BookMapper());
+        params.put(BookDao.ID_COLUMN, id);
+        return jdbc.queryForObject(SQL_FIND_BY_ID, params, new BookMapper());
     }
 
     @Override
     public List<Book> findAll() {
         return jdbc.query(sqlFindAll, new BooksResultMapper());
+    }
+
+    @Override
+    public void update(Book book) {
+        final HashMap<String, Object> params = new HashMap<>(2);
+        params.put(BookDao.ID_COLUMN, book.getId());
+        params.put(BookDao.TITLE_COLUMN, book.getTitle());
+        jdbc.update(SQL_UPDATE, params);
+    }
+
+    @Override
+    public void delete(Book book) {
+        final HashMap<String, Object> params = new HashMap<>(1);
+        params.put(BookDao.ID_COLUMN, book.getId());
+        jdbc.update(SQL_DELETE, params);
     }
 
     private Book getBook(Map<Integer, String> genres, Map<Integer, String> authors, Integer id, String title) {
@@ -94,9 +115,9 @@ public class BookDaoJdbc implements BookDao {
             Integer id = null;
             String title = null;
             while (rs.next()) {
-                id = rs.getInt("id");
+                id = rs.getInt(BookDao.ID_COLUMN);
                 if (lastId != id) {
-                    title = rs.getString("title");
+                    title = rs.getString(BookDao.TITLE_COLUMN);
                     if (lastId != -1) {
                         Book b = getBook(genres, authors, id, title);
                         list.add(b);
@@ -119,8 +140,8 @@ public class BookDaoJdbc implements BookDao {
     private class BookMapper implements RowMapper<Book> {
         @Override
         public Book mapRow(ResultSet resultSet, int i) throws SQLException {
-            int id = resultSet.getInt("id");
-            String name = resultSet.getString("title");
+            int id = resultSet.getInt(BookDao.ID_COLUMN);
+            String name = resultSet.getString(BookDao.TITLE_COLUMN);
             List<Genre> genres = new ArrayList<>();
             List<Author> authors = new ArrayList<>();
 

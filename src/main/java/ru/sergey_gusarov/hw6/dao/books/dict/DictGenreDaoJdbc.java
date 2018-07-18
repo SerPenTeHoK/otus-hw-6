@@ -13,6 +13,19 @@ import java.util.List;
 
 @Repository
 public class DictGenreDaoJdbc implements DictGenreDao {
+    public static final String SQL_COUNT = "select count(*) from " + DictGenreDao.TABLE_NAME;
+    public static final String SQL_FIND_ALL = "select * from " + DictGenreDao.TABLE_NAME;
+    public static final String SQL_FIND_BY_ID = SQL_FIND_ALL + " where " + DictGenreDao.ID_COLUMN +
+            " = :" + DictGenreDao.ID_COLUMN;
+    public static final String SQL_INSERT = "insert into " + DictGenreDao.TABLE_NAME +
+            " ("+DictGenreDao.ID_COLUMN + ", " + DictGenreDao.NAME_COLUMN +
+            ") values (:" + DictGenreDao.ID_COLUMN +" ,:" + DictGenreDao.NAME_COLUMN + ")";
+    public static final String SQL_UPDATE = "update " + DictGenreDao.TABLE_NAME +
+            " set " + DictGenreDao.NAME_COLUMN + " = ? where " + DictGenreDao.ID_COLUMN +
+            " = :"+DictGenreDao.ID_COLUMN;
+    public static final String SQL_DELETE = "delete from " + DictGenreDao.TABLE_NAME +
+            " where " + DictGenreDao.ID_COLUMN + " = :" + DictGenreDao.ID_COLUMN;
+
     private final NamedParameterJdbcOperations jdbc;
 
     public DictGenreDaoJdbc(NamedParameterJdbcOperations jdbc) {
@@ -21,41 +34,56 @@ public class DictGenreDaoJdbc implements DictGenreDao {
 
     @Override
     public int count() {
-        return jdbc.queryForObject("select count(*) from Genre", Collections.EMPTY_MAP, Integer.class);
+        return jdbc.queryForObject(SQL_COUNT, Collections.EMPTY_MAP, Integer.class);
     }
 
     @Override
     public void insert(Genre genre) {
         final HashMap<String, Object> params = new HashMap<>(2);
-        params.put("id", genre.getId());
-        params.put("name", genre.getName());
-        jdbc.update("insert into Genre (id, `name`) values (:id, :name)", params);
+        params.put(DictGenreDao.ID_COLUMN, genre.getId());
+        params.put(DictGenreDao.NAME_COLUMN, genre.getName());
+        jdbc.update(SQL_INSERT, params);
     }
 
     @Override
     public Genre getById(int id) {
         final HashMap<String, Object> params = new HashMap<>(1);
-        params.put("id", id);
-        return jdbc.queryForObject("select * from Genre where id = :id", params, new GenreMapper());
+        params.put(DictGenreDao.ID_COLUMN, id);
+        return jdbc.queryForObject(SQL_FIND_BY_ID, params, new GenreMapper());
     }
 
     @Override
     public Genre getByName(String name) {
         final HashMap<String, Object> params = new HashMap<>(1);
-        params.put("name", name);
+        params.put(DictGenreDao.NAME_COLUMN, name);
         return jdbc.queryForObject("select * from Genre where name = :name", params, new GenreMapper());
     }
 
     @Override
     public List<Genre> findAll() {
-        return jdbc.query("select * from Genre", new GenreMapper());
+        return jdbc.query(SQL_FIND_ALL, new GenreMapper());
+    }
+
+    @Override
+    public void update(Genre genre) {
+        final HashMap<String, Object> params = new HashMap<>(2);
+        params.put(DictGenreDao.ID_COLUMN, genre.getId());
+        params.put(DictGenreDao.NAME_COLUMN, genre.getName());
+        jdbc.update(SQL_UPDATE, params);
+    }
+
+    @Override
+    public void delete(Genre genre) {
+        final HashMap<String, Object> params = new HashMap<>(1);
+        params.put(DictGenreDao.ID_COLUMN, genre.getId());
+        jdbc.update(SQL_DELETE, params);
     }
 
     private static class GenreMapper implements RowMapper<Genre> {
         @Override
         public Genre mapRow(ResultSet resultSet, int i) throws SQLException {
-            int id = resultSet.getInt("id");
-            String name = resultSet.getString("name");
+            int id = resultSet.getInt(DictGenreDao.ID_COLUMN);
+            String name = resultSet.getString(DictGenreDao.NAME_COLUMN);
             return new Genre(id, name);
         }
     }
