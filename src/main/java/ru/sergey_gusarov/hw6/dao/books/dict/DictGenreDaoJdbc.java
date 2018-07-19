@@ -17,6 +17,8 @@ public class DictGenreDaoJdbc implements DictGenreDao {
     public static final String SQL_FIND_ALL = "select * from " + DictGenreDao.TABLE_NAME;
     public static final String SQL_FIND_BY_ID = SQL_FIND_ALL + " where " + DictGenreDao.ID_COLUMN +
             " = :" + DictGenreDao.ID_COLUMN;
+    public static final String SQL_FIND_BY_NAME = SQL_FIND_ALL + " where " + DictGenreDao.NAME_COLUMN +
+            " = :" + DictGenreDao.NAME_COLUMN;
     public static final String SQL_INSERT = "insert into " + DictGenreDao.TABLE_NAME +
             " ("+DictGenreDao.ID_COLUMN + ", " + DictGenreDao.NAME_COLUMN +
             ") values (:" + DictGenreDao.ID_COLUMN +" ,:" + DictGenreDao.NAME_COLUMN + ")";
@@ -38,11 +40,11 @@ public class DictGenreDaoJdbc implements DictGenreDao {
     }
 
     @Override
-    public void insert(Genre genre) {
+    public int insert(Genre genre) {
         final HashMap<String, Object> params = new HashMap<>(2);
         params.put(DictGenreDao.ID_COLUMN, genre.getId());
         params.put(DictGenreDao.NAME_COLUMN, genre.getName());
-        jdbc.update(SQL_INSERT, params);
+        return jdbc.update(SQL_INSERT, params);
     }
 
     @Override
@@ -56,7 +58,7 @@ public class DictGenreDaoJdbc implements DictGenreDao {
     public Genre getByName(String name) {
         final HashMap<String, Object> params = new HashMap<>(1);
         params.put(DictGenreDao.NAME_COLUMN, name);
-        return jdbc.queryForObject("select * from Genre where name = :name", params, new GenreMapper());
+        return jdbc.queryForObject(SQL_FIND_BY_NAME, params, new GenreMapper());
     }
 
     @Override
@@ -65,18 +67,18 @@ public class DictGenreDaoJdbc implements DictGenreDao {
     }
 
     @Override
-    public void update(Genre genre) {
+    public int update(Genre genre) {
         final HashMap<String, Object> params = new HashMap<>(2);
         params.put(DictGenreDao.ID_COLUMN, genre.getId());
         params.put(DictGenreDao.NAME_COLUMN, genre.getName());
-        jdbc.update(SQL_UPDATE, params);
+        return jdbc.update(SQL_UPDATE, params);
     }
 
     @Override
-    public void delete(Genre genre) {
+    public int delete(Genre genre) {
         final HashMap<String, Object> params = new HashMap<>(1);
         params.put(DictGenreDao.ID_COLUMN, genre.getId());
-        jdbc.update(SQL_DELETE, params);
+        return jdbc.update(SQL_DELETE, params);
     }
 
     private static class GenreMapper implements RowMapper<Genre> {

@@ -5,15 +5,13 @@ import ru.sergey_gusarov.hw6.domain.books.Genre;
 import java.util.List;
 
 public interface DictGenreDao {
-    public static final String TABLE_NAME = "GENRE";
-    public static final String ID_COLUMN = "ID";
-    public static final String NAME_COLUMN = "NAME";
-
-
+    String TABLE_NAME = "GENRE";
+    String ID_COLUMN = "ID";
+    String NAME_COLUMN = "NAME";
 
     int count();
 
-    void insert(Genre genre);
+    int insert(Genre genre);
 
     Genre getById(int id);
 
@@ -21,7 +19,7 @@ public interface DictGenreDao {
 
     List<Genre> findAll();
 
-    void update(Genre genre);
+    int update(Genre genre);
 
-    void delete(Genre genre);
+    int delete(Genre genre);
 }

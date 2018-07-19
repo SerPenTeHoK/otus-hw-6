@@ -1,14 +1,15 @@
 package ru.sergey_gusarov.hw6.domain.books;
 
 import java.util.List;
+import java.util.Set;
 
 public class Book {
     private final int id;
     private final String title;
-    private List<Genre> genres;
-    private List<Author> authors;
+    private Set<Genre> genres;
+    private Set<Author> authors;
 
-    public Book(int id, String title, List<Genre> genres, List<Author> authors) {
+    public Book(int id, String title, Set<Genre> genres, Set<Author> authors) {
 
         this.id = id;
         this.title = title;
@@ -16,11 +17,11 @@ public class Book {
         this.authors = authors;
     }
 
-    public List<Genre> getGenres() {
+    public Set<Genre> getGenres() {
         return genres;
     }
 
-    public List<Author> getAuthors() {
+    public Set<Author> getAuthors() {
         return authors;
     }
 

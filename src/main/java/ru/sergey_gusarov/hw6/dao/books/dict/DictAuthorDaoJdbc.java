@@ -17,6 +17,8 @@ public class DictAuthorDaoJdbc implements DictAuthorDao {
     public static final String SQL_FIND_ALL = "select * from " + DictAuthorDao.TABLE_NAME;
     public static final String SQL_FIND_BY_ID = SQL_FIND_ALL + " where " + DictAuthorDao.ID_COLUMN +
             " = :" + DictAuthorDao.ID_COLUMN;
+    public static final String SQL_FIND_BY_NAME = SQL_FIND_ALL + " where " + DictAuthorDao.NAME_COLUMN +
+            " = :" + DictAuthorDao.NAME_COLUMN;
     public static final String SQL_INSERT = "insert into " + DictAuthorDao.TABLE_NAME +
             " ("+DictAuthorDao.ID_COLUMN + ", " + DictAuthorDao.NAME_COLUMN +
             ") values (:" + DictAuthorDao.ID_COLUMN +" ,:" + DictAuthorDao.NAME_COLUMN + ")";
@@ -38,11 +40,11 @@ public class DictAuthorDaoJdbc implements DictAuthorDao {
     }
 
     @Override
-    public void insert(Author author) {
+    public int insert(Author author) {
         final HashMap<String, Object> params = new HashMap<>(2);
         params.put(DictAuthorDao.ID_COLUMN, author.getId());
         params.put(DictAuthorDao.NAME_COLUMN, author.getName());
-        jdbc.update(SQL_INSERT, params);
+        return jdbc.update(SQL_INSERT, params);
     }
 
     @Override
@@ -56,7 +58,7 @@ public class DictAuthorDaoJdbc implements DictAuthorDao {
     public Author getByName(String name) {
         final HashMap<String, Object> params = new HashMap<>(1);
         params.put(DictAuthorDao.NAME_COLUMN, name);
-        return jdbc.queryForObject("select * from Author where name = :name", params, new AuthorMapper());
+        return jdbc.queryForObject(SQL_FIND_BY_NAME, params, new AuthorMapper());
     }
 
     @Override
@@ -65,18 +67,18 @@ public class DictAuthorDaoJdbc implements DictAuthorDao {
     }
 
     @Override
-    public void update(Author author) {
+    public int update(Author author) {
         final HashMap<String, Object> params = new HashMap<>(2);
         params.put(DictAuthorDao.ID_COLUMN, author.getId());
         params.put(DictAuthorDao.NAME_COLUMN, author.getName());
-        jdbc.update(SQL_UPDATE, params);
+        return jdbc.update(SQL_UPDATE, params);
     }
 
     @Override
-    public void delete(Author author) {
+    public int delete(Author author) {
         final HashMap<String, Object> params = new HashMap<>(1);
         params.put(DictAuthorDao.ID_COLUMN, author.getId());
-        jdbc.update(SQL_DELETE, params);
+        return jdbc.update(SQL_DELETE, params);
     }
 
     private static class AuthorMapper implements RowMapper<Author> {
