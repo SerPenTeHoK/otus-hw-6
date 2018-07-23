@@ -5,9 +5,9 @@ import ru.sergey_gusarov.hw6.domain.books.Genre;
 import java.util.List;
 
 public interface DictGenreDao {
-    String TABLE_NAME = "GENRE";
-    String ID_COLUMN = "ID";
-    String NAME_COLUMN = "NAME";
+    static final String TABLE_NAME = "GENRE";
+    static final String ID_COLUMN = "ID";
+    static final String NAME_COLUMN = "NAME";
 
     int count();
 

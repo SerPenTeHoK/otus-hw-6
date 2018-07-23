@@ -20,11 +20,11 @@ public class DictAuthorDaoJdbc implements DictAuthorDao {
     public static final String SQL_FIND_BY_NAME = SQL_FIND_ALL + " where " + DictAuthorDao.NAME_COLUMN +
             " = :" + DictAuthorDao.NAME_COLUMN;
     public static final String SQL_INSERT = "insert into " + DictAuthorDao.TABLE_NAME +
-            " ("+DictAuthorDao.ID_COLUMN + ", " + DictAuthorDao.NAME_COLUMN +
-            ") values (:" + DictAuthorDao.ID_COLUMN +" ,:" + DictAuthorDao.NAME_COLUMN + ")";
+            " (" + DictAuthorDao.ID_COLUMN + ", " + DictAuthorDao.NAME_COLUMN +
+            ") values (:" + DictAuthorDao.ID_COLUMN + " ,:" + DictAuthorDao.NAME_COLUMN + ")";
     public static final String SQL_UPDATE = "update " + DictAuthorDao.TABLE_NAME +
             " set " + DictAuthorDao.NAME_COLUMN + " = ? where " + DictAuthorDao.ID_COLUMN +
-            " = :"+DictAuthorDao.ID_COLUMN;
+            " = :" + DictAuthorDao.ID_COLUMN;
     public static final String SQL_DELETE = "delete from " + DictAuthorDao.TABLE_NAME +
             " where " + DictAuthorDao.ID_COLUMN + " = :" + DictAuthorDao.ID_COLUMN;
 

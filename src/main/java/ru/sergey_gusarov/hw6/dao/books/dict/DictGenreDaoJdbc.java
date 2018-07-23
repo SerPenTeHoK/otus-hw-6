@@ -20,11 +20,11 @@ public class DictGenreDaoJdbc implements DictGenreDao {
     public static final String SQL_FIND_BY_NAME = SQL_FIND_ALL + " where " + DictGenreDao.NAME_COLUMN +
             " = :" + DictGenreDao.NAME_COLUMN;
     public static final String SQL_INSERT = "insert into " + DictGenreDao.TABLE_NAME +
-            " ("+DictGenreDao.ID_COLUMN + ", " + DictGenreDao.NAME_COLUMN +
-            ") values (:" + DictGenreDao.ID_COLUMN +" ,:" + DictGenreDao.NAME_COLUMN + ")";
+            " (" + DictGenreDao.ID_COLUMN + ", " + DictGenreDao.NAME_COLUMN +
+            ") values (:" + DictGenreDao.ID_COLUMN + " ,:" + DictGenreDao.NAME_COLUMN + ")";
     public static final String SQL_UPDATE = "update " + DictGenreDao.TABLE_NAME +
             " set " + DictGenreDao.NAME_COLUMN + " = ? where " + DictGenreDao.ID_COLUMN +
-            " = :"+DictGenreDao.ID_COLUMN;
+            " = :" + DictGenreDao.ID_COLUMN;
     public static final String SQL_DELETE = "delete from " + DictGenreDao.TABLE_NAME +
             " where " + DictGenreDao.ID_COLUMN + " = :" + DictGenreDao.ID_COLUMN;
 

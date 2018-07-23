@@ -6,15 +6,14 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import ru.sergey_gusarov.hw6.dao.books.dict.DictAuthorDao;
-import ru.sergey_gusarov.hw6.dao.books.dict.DictGenreDao;
+import ru.sergey_gusarov.hw6.dao.books.dict.DictAuthorDaoJdbc;
+import ru.sergey_gusarov.hw6.dao.books.dict.DictGenreDaoJdbc;
 import ru.sergey_gusarov.hw6.domain.books.Author;
 import ru.sergey_gusarov.hw6.domain.books.Book;
 import ru.sergey_gusarov.hw6.domain.books.Genre;
+import ru.sergey_gusarov.hw6.exception.DaoException;
 import ru.sergey_gusarov.hw6.jdbc.InsertAuthor;
 import ru.sergey_gusarov.hw6.jdbc.InsertBookAuthorRelProvider;
 import ru.sergey_gusarov.hw6.jdbc.InsertBookGenreRelProvider;
@@ -28,26 +27,13 @@ import java.util.stream.Collectors;
 @Repository
 @Transactional
 public class BookDaoJdbc implements BookDao {
-    private final NamedParameterJdbcOperations jdbc;
-    private final DictAuthorDao dictAuthorDao;
-    private final DictGenreDao dictGenreDao;
-
-    @Autowired
-    private InsertAuthor InsertAuthor;
-    @Autowired
-    private InsertBookAuthorRelProvider insertBookAuthorRelProvider;
-    @Autowired
-    private InsertBookGenreRelProvider insertBookGenreRelProvider;
-    @Autowired
-    private InsertGenre insertGenre;
-
     public static final String SQL_COUNT = "select count(*) from " + BookDao.TABLE_NAME;
     public static final String SQL_INSERT = "insert into " + BookDao.TABLE_NAME +
-            " ("+BookDao.ID_COLUMN + ", " + BookDao.TITLE_COLUMN +
-            ") values (:" + BookDao.ID_COLUMN +" ,:" + BookDao.TITLE_COLUMN + ")";
-    public static final String SQL_UPDATE = "update " + BookDao.TABLE_NAME + " set " + BookDao.TITLE_COLUMN + " = ? where " + BookDao.ID_COLUMN + " = :"+BookDao.ID_COLUMN;
+            " (" + BookDao.ID_COLUMN + ", " + BookDao.TITLE_COLUMN +
+            ") values (:" + BookDao.ID_COLUMN + " ,:" + BookDao.TITLE_COLUMN + ")";
+    public static final String SQL_UPDATE = "update " + BookDao.TABLE_NAME + " set " + BookDao.TITLE_COLUMN +
+            " = :" + BookDao.TITLE_COLUMN + " where " + BookDao.ID_COLUMN + " = :" + BookDao.ID_COLUMN;
     public static final String SQL_DELETE = "delete from " + BookDao.TABLE_NAME + " where " + BookDao.ID_COLUMN + " = :" + BookDao.ID_COLUMN;
-
     // union - стараюсь без яркой необходимсти не использовать
     private static final String SQL_FIND_ALL = "select b.id as book_id, b.title, " +
             "a.id as AUTHOR_ID, a.name as AUTHOR_NAME, " +
@@ -57,13 +43,22 @@ public class BookDaoJdbc implements BookDao {
             "left join AUTHOR a on a.id = ba.author_id " +
             "left join BOOK_GENRE_REL bg on bg.book_id = b.id " +
             "left join GENRE g on g.id = bg.genre_id";
-    public static final String SQL_FIND_BY_ID = SQL_FIND_ALL + " where " + BookDao.ID_COLUMN + " = :" + BookDao.ID_COLUMN;
+    public static final String SQL_FIND_BY_ID = SQL_FIND_ALL + " where b.id = :" + BookDao.ID_COLUMN;
+    private final NamedParameterJdbcOperations jdbc;
+
+    // Не best, но перечислять в конструкторе тоже странно.
+    @Autowired
+    private InsertAuthor InsertAuthor;
+    @Autowired
+    private InsertBookAuthorRelProvider insertBookAuthorRelProvider;
+    @Autowired
+    private InsertBookGenreRelProvider insertBookGenreRelProvider;
+    @Autowired
+    private InsertGenre insertGenre;
 
 
-    public BookDaoJdbc(NamedParameterJdbcOperations jdbc, DictAuthorDao dictAuthorDao, DictGenreDao dictGenreDao) {
+    public BookDaoJdbc(NamedParameterJdbcOperations jdbc) {
         this.jdbc = jdbc;
-        this.dictAuthorDao = dictAuthorDao;
-        this.dictGenreDao = dictGenreDao;
     }
 
     @Override
@@ -72,23 +67,35 @@ public class BookDaoJdbc implements BookDao {
     }
 
     @Override
-    @Transactional(propagation = Propagation.MANDATORY)
-    public int insertWithAuthorAndGenre(Book book) {
+    public int insertWithAuthorAndGenre(Book book) throws DaoException {
         HashMap<String, Object> paramMap = new HashMap<>(2);
         paramMap.put(BookDao.ID_COLUMN, book.getId());
         paramMap.put(BookDao.TITLE_COLUMN, book.getTitle());
         jdbc.update(SQL_INSERT, paramMap);
 
         Set<Author> authors = book.getAuthors();
+        Map params;
         if (authors != null) {
             for (Author author : authors) {
-                paramMap = new HashMap<String, Object>();
-                paramMap.put(InsertAuthor.ID_PARAMETER, author.getId());
-                paramMap.put(InsertAuthor.NAME_PARAMETER, author.getName());
-                InsertAuthor.updateByNamedParam(paramMap);
-                paramMap = new HashMap<String, Object>();
-                paramMap.put(insertBookAuthorRelProvider.BOOK_ID_PARAMETER, author.getId());
-                paramMap.put(insertBookAuthorRelProvider.AUTHOR_ID_PARAMETER, book.getId());
+                params = new HashMap<String, Object>(1);
+                params.put(DictAuthorDaoJdbc.NAME_COLUMN, author.getName());
+                int authorResult = 0;
+                try {
+                    authorResult = jdbc.queryForObject(DictAuthorDaoJdbc.SQL_FIND_BY_NAME, params, new idMapper());
+                } catch (EmptyResultDataAccessException e) {
+                    if(e.getActualSize() > 1)
+                        throw e;
+                }
+                if (authorResult == 0) {
+                    paramMap = new HashMap<String, Object>(2);
+                    paramMap.put(InsertAuthor.ID_PARAMETER, author.getId());
+                    paramMap.put(InsertAuthor.NAME_PARAMETER, author.getName());
+                    InsertAuthor.updateByNamedParam(paramMap);
+                } else if (authorResult != author.getId())
+                    throw new DaoException("Ошибка имена авторов совпадают, но имею разные идентификаторы!");
+                paramMap = new HashMap<String, Object>(2);
+                paramMap.put(insertBookAuthorRelProvider.BOOK_ID_PARAMETER, book.getId());
+                paramMap.put(insertBookAuthorRelProvider.AUTHOR_ID_PARAMETER, author.getId());
                 insertBookAuthorRelProvider.updateByNamedParam(paramMap);
             }
         }
@@ -98,20 +105,33 @@ public class BookDaoJdbc implements BookDao {
         Set<Genre> genres = book.getGenres();
         if (genres != null) {
             for (Genre genre : genres) {
-                paramMap = new HashMap<String, Object>();
-                paramMap.put(insertGenre.ID_PARAMETER, genre.getId());
-                paramMap.put(insertGenre.NAME_PARAMETER, genre.getName());
-                insertGenre.updateByNamedParam(paramMap);
-                paramMap = new HashMap<String, Object>();
-                paramMap.put(insertBookGenreRelProvider.BOOK_ID_PARAMETER, genre.getId());
-                paramMap.put(insertBookGenreRelProvider.GENRE_ID_PARAMETER, book.getId());
+                params = new HashMap<String, Object>(1);
+                params.put(DictGenreDaoJdbc.NAME_COLUMN, genre.getName());
+                int genreResult = 0;
+                try {
+                    genreResult = jdbc.queryForObject(DictGenreDaoJdbc.SQL_FIND_BY_NAME, params, new idMapper());
+                } catch (EmptyResultDataAccessException e) {
+                    if(e.getActualSize() > 1)
+                        throw e;
+                }
+                if (genreResult == 0) {
+                    paramMap = new HashMap<String, Object>(2);
+                    paramMap.put(insertGenre.ID_PARAMETER, genre.getId());
+                    paramMap.put(insertGenre.NAME_PARAMETER, genre.getName());
+                    insertGenre.updateByNamedParam(paramMap);
+                } else if (genreResult != genre.getId())
+                    throw new DaoException("Ошибка имена жанров совпадают, но имею разные идентификаторы!");
+                paramMap = new HashMap<String, Object>(2);
+                paramMap.put(insertBookGenreRelProvider.BOOK_ID_PARAMETER, book.getId());
+                paramMap.put(insertBookGenreRelProvider.GENRE_ID_PARAMETER, genre.getId());
                 insertBookGenreRelProvider.updateByNamedParam(paramMap);
             }
         }
+
         insertGenre.flush();
         insertBookGenreRelProvider.flush();
 
-        return -1;
+        return 1;
     }
 
     @Override
@@ -123,14 +143,14 @@ public class BookDaoJdbc implements BookDao {
     }
 
     @Override
-    public Book getById(int id) {
+    public Book getById(int id) throws DaoException {
         final HashMap<String, Object> params = new HashMap<>(1);
         params.put(BookDao.ID_COLUMN, id);
         List<Book> books = jdbc.query(SQL_FIND_BY_ID, params, new BooksResultMapper());
-        if(books.size() > 1)
-            throw new ArrayIndexOutOfBoundsException("Найдено более одно значения по ID") ;
-        //if(books.isEmpty())
-
+        if (books.size() > 1)
+            throw new DaoException("Найдено более одно значения по ID");
+        else if (books.isEmpty())
+            return null;
         return books.get(0);
     }
 
@@ -169,6 +189,14 @@ public class BookDaoJdbc implements BookDao {
         return new Book(id, title, genreList, authorList);
     }
 
+    private static class idMapper implements RowMapper<Integer> {
+        @Override
+        public Integer mapRow(ResultSet resultSet, int i) throws SQLException {
+            int id = resultSet.getInt("ID");
+            return id;
+        }
+    }
+
     private class BooksResultMapper implements ResultSetExtractor<List<Book>> {
         @Override
         public List<Book> extractData(ResultSet rs) throws SQLException,
@@ -183,13 +211,13 @@ public class BookDaoJdbc implements BookDao {
             while (rs.next()) {
                 id = rs.getInt(BookDao.ID_COLUMN);
                 if (lastId != id) {
-                    title = rs.getString(BookDao.TITLE_COLUMN);
                     if (lastId != -1) {
-                        Book b = getBook(genres, authors, id, title);
+                        Book b = getBook(genres, authors, lastId, title);
                         list.add(b);
                         genres = new HashMap<>();
                         authors = new HashMap<>();
                     }
+                    title = rs.getString(BookDao.TITLE_COLUMN);
                     lastId = id;
                 }
                 authors.put(rs.getInt("author_id"), rs.getString("author_name"));
@@ -202,30 +230,4 @@ public class BookDaoJdbc implements BookDao {
             return list;
         }
     }
-
-    /*
-    private class BookMapper implements RowMapper<Book> {
-        @Override
-        public Book mapRow(ResultSet resultSet, int i) throws SQLException {
-            int id = resultSet.getInt(BookDao.ID_COLUMN);
-            String name = resultSet.getString(BookDao.TITLE_COLUMN);
-            List<Genre> genres = new ArrayList<>();
-            List<Author> authors = new ArrayList<>();
-
-            final HashMap<String, Object> params = new HashMap<>(1);
-            params.put("id", id);
-            List<Map<String, Object>> listMapAuthors = jdbc.queryForList("select AUTHOR_ID from BOOK_AUTHOR_REL where BOOK_ID = :id", params);
-            for (Map map : listMapAuthors) {
-                Integer idAuthor = (Integer) map.get("AUTHOR_ID");
-                authors.add(dictAuthorDao.getById(idAuthor));
-            }
-            List<Map<String, Object>> listMapGenre = jdbc.queryForList("select GENRE_ID from BOOK_GENRE_REL where BOOK_ID = :id", params);
-            for (Map map : listMapGenre) {
-                Integer idGenre = (Integer) map.get("GENRE_ID");
-                genres.add(dictGenreDao.getById(idGenre));
-            }
-            return new Book(id, name, genres, authors);
-        }
-    }
-    */
 }

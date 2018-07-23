@@ -5,9 +5,9 @@ import ru.sergey_gusarov.hw6.domain.books.Author;
 import java.util.List;
 
 public interface DictAuthorDao {
-    String TABLE_NAME = "AUTHOR";
-    String ID_COLUMN = "ID";
-    String NAME_COLUMN = "NAME";
+    static final String TABLE_NAME = "AUTHOR";
+    static final String ID_COLUMN = "ID";
+    static final String NAME_COLUMN = "NAME";
 
     int count();
 

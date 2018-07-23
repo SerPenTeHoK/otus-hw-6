@@ -1,6 +1,6 @@
 package ru.sergey_gusarov.hw6.domain.books;
 
-import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class Book {
